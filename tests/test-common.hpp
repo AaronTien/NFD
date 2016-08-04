@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014,  Regents of the University of California,
- *                      Arizona Board of Regents,
- *                      Colorado State University,
- *                      University Pierre & Marie Curie, Sorbonne University,
- *                      Washington University in St. Louis,
- *                      Beijing Institute of Technology,
- *                      The University of Memphis
+ * Copyright (c) 2014-2015,  Regents of the University of California,
+ *                           Arizona Board of Regents,
+ *                           Colorado State University,
+ *                           University Pierre & Marie Curie, Sorbonne University,
+ *                           Washington University in St. Louis,
+ *                           Beijing Institute of Technology,
+ *                           The University of Memphis.
  *
  * This file is part of NFD (Named Data Networking Forwarding Daemon).
  * See AUTHORS.md for complete list of NFD authors and contributors.
@@ -62,7 +62,7 @@ protected:
 
 /** \brief a base test fixture that overrides steady clock and system clock
  */
-class UnitTestTimeFixture : public BaseFixture
+class UnitTestTimeFixture : public virtual BaseFixture
 {
 protected:
   UnitTestTimeFixture()
@@ -88,8 +88,6 @@ protected:
   void
   advanceClocks(const time::nanoseconds& tick, size_t nTicks = 1)
   {
-    BOOST_ASSERT(nTicks >= 0);
-
     this->advanceClocks(tick, tick * nTicks);
   }
 
@@ -135,17 +133,20 @@ protected:
 };
 
 inline shared_ptr<Interest>
-makeInterest(const Name& name)
+makeInterest(const Name& name, uint32_t nonce = 0)
 {
-  return make_shared<Interest>(name);
+  auto interest = make_shared<Interest>(name);
+  if (nonce != 0) {
+    interest->setNonce(nonce);
+  }
+  return interest;
 }
 
 inline shared_ptr<Data>
-signData(const shared_ptr<Data>& data)
+signData(shared_ptr<Data> data)
 {
   ndn::SignatureSha256WithRsa fakeSignature;
-  fakeSignature.setValue(ndn::dataBlock(tlv::SignatureValue,
-                                        static_cast<const uint8_t*>(nullptr), 0));
+  fakeSignature.setValue(ndn::encoding::makeEmptyBlock(tlv::SignatureValue));
   data->setSignature(fakeSignature);
   data->wireEncode();
 
@@ -155,11 +156,27 @@ signData(const shared_ptr<Data>& data)
 inline shared_ptr<Data>
 makeData(const Name& name)
 {
-  shared_ptr<Data> data = make_shared<Data>(name);
-
+  auto data = make_shared<Data>(name);
   return signData(data);
 }
 
+inline shared_ptr<Link>
+makeLink(const Name& name, std::initializer_list<std::pair<uint32_t, Name>> delegations)
+{
+  auto link = make_shared<Link>(name, delegations);
+  signData(link);
+  return link;
+}
+
+inline lp::Nack
+makeNack(const Name& name, uint32_t nonce, lp::NackReason reason)
+{
+  Interest interest(name);
+  interest.setNonce(nonce);
+  lp::Nack nack(std::move(interest));
+  nack.setReason(reason);
+  return nack;
+}
 
 } // namespace tests
 } // namespace nfd

@@ -31,8 +31,6 @@
 
 namespace nfd {
 
-class EthernetFace;
-
 class EthernetFactory : public ProtocolFactory
 {
 public:
@@ -50,14 +48,7 @@ public:
   };
 
   typedef std::map<std::pair<std::string, ethernet::Address>,
-                   shared_ptr<EthernetFace>> MulticastFaceMap;
-
-  // from ProtocolFactory
-  virtual void
-  createFace(const FaceUri& uri,
-             ndn::nfd::FacePersistency persistency,
-             const FaceCreatedCallback& onCreated,
-             const FaceConnectFailedCallback& onConnectFailed) DECL_OVERRIDE;
+                   shared_ptr<Face>> MulticastFaceMap;
 
   /**
    * \brief Create an EthernetFace to communicate with the given multicast group
@@ -72,9 +63,9 @@ public:
    * \returns always a valid shared pointer to an EthernetFace object,
    *          an exception will be thrown if the creation fails
    *
-   * \throws EthernetFactory::Error or EthernetFace::Error
+   * \throws EthernetFactory::Error or EthernetTransport::Error
    */
-  shared_ptr<EthernetFace>
+  shared_ptr<Face>
   createMulticastFace(const NetworkInterfaceInfo& interface,
                       const ethernet::Address& address);
 
@@ -84,19 +75,24 @@ public:
   const MulticastFaceMap&
   getMulticastFaces() const;
 
-  virtual std::list<shared_ptr<const Channel>>
-  getChannels() const;
+public: // from ProtocolFactory
+  virtual void
+  createFace(const FaceUri& uri,
+             ndn::nfd::FacePersistency persistency,
+             const FaceCreatedCallback& onCreated,
+             const FaceCreationFailedCallback& onConnectFailed) DECL_OVERRIDE;
+
+  virtual std::vector<shared_ptr<const Channel>>
+  getChannels() const DECL_OVERRIDE;
 
 private:
   /**
    * \brief Look up EthernetFace using specified interface and address
    *
-   * \returns shared pointer to the existing EthernetFace object or
-   *          empty shared pointer when such face does not exist
-   *
-   * \throws never
+   * \returns shared pointer to the existing EthernetFace object
+   *          or nullptr when such face does not exist
    */
-  shared_ptr<EthernetFace>
+  shared_ptr<Face>
   findMulticastFace(const std::string& interfaceName,
                     const ethernet::Address& address) const;
 

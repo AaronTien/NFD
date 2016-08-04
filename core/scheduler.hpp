@@ -27,21 +27,22 @@
 #define NFD_CORE_SCHEDULER_HPP
 
 #include "common.hpp"
-
-#include "ns3/simulator.h"
+#include <ndn-cxx/util/scheduler.hpp>
 
 namespace nfd {
 namespace scheduler {
 
+using ndn::Scheduler;
+
 /** \class EventId
  *  \brief Opaque type (shared_ptr) representing ID of a scheduled event
  */
-typedef std::shared_ptr<ns3::EventId> EventId;
+using ndn::EventId;
 
 /** \brief schedule an event
  */
 EventId
-schedule(const time::nanoseconds& after, const std::function<void()>& event);
+schedule(const time::nanoseconds& after, const Scheduler::Event& event);
 
 /** \brief cancel a scheduled event
  */

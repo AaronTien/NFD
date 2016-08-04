@@ -33,14 +33,25 @@
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/network-monitor.hpp>
 
+namespace ndn {
+class Face;
+namespace mgmt {
+class Dispatcher;
+} // namespace mgmt
+} // namespace ndn
+
 namespace nfd {
 
 class Forwarder;
-class InternalFace;
 class FibManager;
 class FaceManager;
 class StrategyChoiceManager;
-class StatusServer;
+class ForwarderStatusManager;
+class CommandValidator;
+
+namespace face {
+class Face;
+} // namespace face
 
 /**
  * \brief Class representing NFD instance
@@ -97,16 +108,19 @@ private:
 
   unique_ptr<Forwarder> m_forwarder;
 
-  shared_ptr<InternalFace>          m_internalFace;
-  unique_ptr<FibManager>            m_fibManager;
-  unique_ptr<FaceManager>           m_faceManager;
-  unique_ptr<StrategyChoiceManager> m_strategyChoiceManager;
-  unique_ptr<StatusServer>          m_statusServer;
+  ndn::KeyChain&               m_keyChain;
+  shared_ptr<face::Face>       m_internalFace;
+  shared_ptr<ndn::Face>        m_internalClientFace;
+  unique_ptr<CommandValidator> m_validator;
 
-  ndn::KeyChain&                    m_keyChain;
+  unique_ptr<ndn::mgmt::Dispatcher>  m_dispatcher;
+  unique_ptr<FibManager>             m_fibManager;
+  unique_ptr<FaceManager>            m_faceManager;
+  unique_ptr<StrategyChoiceManager>  m_strategyChoiceManager;
+  unique_ptr<ForwarderStatusManager> m_forwarderStatusManager;
 
-  ndn::util::NetworkMonitor         m_networkMonitor;
-  scheduler::ScopedEventId          m_reloadConfigEvent;
+  unique_ptr<ndn::util::NetworkMonitor> m_networkMonitor;
+  scheduler::ScopedEventId              m_reloadConfigEvent;
 };
 
 } // namespace nfd

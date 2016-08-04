@@ -6,3 +6,5 @@
 build/
 VERSION
 unit-tests.conf
+
+daemon/fw/.vscode/.browse.VC.db

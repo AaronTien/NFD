@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014,  Regents of the University of California,
- *                      Arizona Board of Regents,
- *                      Colorado State University,
- *                      University Pierre & Marie Curie, Sorbonne University,
- *                      Washington University in St. Louis,
- *                      Beijing Institute of Technology,
- *                      The University of Memphis
+ * Copyright (c) 2014-2015,  Regents of the University of California,
+ *                           Arizona Board of Regents,
+ *                           Colorado State University,
+ *                           University Pierre & Marie Curie, Sorbonne University,
+ *                           Washington University in St. Louis,
+ *                           Beijing Institute of Technology,
+ *                           The University of Memphis.
  *
  * This file is part of NFD (Named Data Networking Forwarding Daemon).
  * See AUTHORS.md for complete list of NFD authors and contributors.
@@ -34,8 +34,6 @@ namespace udp {
 typedef boost::asio::ip::udp::endpoint Endpoint;
 } // namespace udp
 
-class UdpFace;
-
 /**
  * \brief Class implementing UDP-based channel to create faces
  */
@@ -56,20 +54,10 @@ public:
              const time::seconds& timeout);
 
   /**
-   * \brief Enable listening on the local endpoint, accept connections,
-   *        and create faces when remote host makes a connection
-   * \param onFaceCreated  Callback to notify successful creation of the face
-   * \param onAcceptFailed Callback to notify when channel fails
-   *
-   * Once a face is created, if it doesn't send/receive anything for
-   * a period of time equal to timeout, it will be destroyed
-   * \todo this functionality has to be implemented
-   *
-   * \throws UdpChannel::Error if called multiple times
+   * \brief Get number of faces in the channel
    */
-  void
-  listen(const FaceCreatedCallback& onFaceCreated,
-         const ConnectFailedCallback& onReceiveFailed);
+  size_t
+  size() const;
 
   /**
    * \brief Create a face by establishing connection to remote endpoint
@@ -80,20 +68,31 @@ public:
   connect(const udp::Endpoint& remoteEndpoint,
           ndn::nfd::FacePersistency persistency,
           const FaceCreatedCallback& onFaceCreated,
-          const ConnectFailedCallback& onConnectFailed);
+          const FaceCreationFailedCallback& onConnectFailed);
 
   /**
-   * \brief Get number of faces in the channel
+   * \brief Enable listening on the local endpoint, accept connections,
+   *        and create faces when remote host makes a connection
+   * \param onFaceCreated  Callback to notify successful creation of the face
+   * \param onReceiveFailed Callback to notify when channel fails
+   *
+   * Once a face is created, if it doesn't send/receive anything for
+   * a period of time equal to timeout, it will be destroyed
+   * \todo this functionality has to be implemented
+   *
+   * \throws UdpChannel::Error if called multiple times
    */
-  size_t
-  size() const;
+  void
+  listen(const FaceCreatedCallback& onFaceCreated,
+         const FaceCreationFailedCallback& onReceiveFailed);
 
   bool
   isListening() const;
 
 private:
-  std::pair<bool, shared_ptr<UdpFace>>
-  createFace(const udp::Endpoint& remoteEndpoint, ndn::nfd::FacePersistency persistency);
+  void
+  waitForNewPeer(const FaceCreatedCallback& onFaceCreated,
+                 const FaceCreationFailedCallback& onReceiveFailed);
 
   /**
    * \brief The channel has received a new packet from a remote
@@ -103,10 +102,13 @@ private:
   handleNewPeer(const boost::system::error_code& error,
                 size_t nBytesReceived,
                 const FaceCreatedCallback& onFaceCreated,
-                const ConnectFailedCallback& onReceiveFailed);
+                const FaceCreationFailedCallback& onReceiveFailed);
+
+  std::pair<bool, shared_ptr<Face>>
+  createFace(const udp::Endpoint& remoteEndpoint, ndn::nfd::FacePersistency persistency);
 
 private:
-  std::map<udp::Endpoint, shared_ptr<UdpFace>> m_channelFaces;
+  std::map<udp::Endpoint, shared_ptr<Face>> m_channelFaces;
 
   udp::Endpoint m_localEndpoint;
 

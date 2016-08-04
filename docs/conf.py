@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.abspath('.'))
 # ones.
 extensions = [
     'sphinx.ext.todo',
-    'redmine_issue',
+    'redmine_issue'
 ]
 
 def addExtensionIfExists(extension):
@@ -242,13 +242,13 @@ latex_documents = [
 man_pages = [
     ('manpages/nfd', 'nfd', u'Named Data Networking Forwarding Daemon', None, 1),
     ('manpages/ndn-autoconfig-server', 'ndn-autoconfig-server',
-        u'NFD Auto-configuration Server', None, 1),
+        u'NDN auto-configuration server', None, 1),
     ('manpages/ndn-autoconfig', 'ndn-autoconfig',
-        u'NFD Auto-configuration Client', None, 1),
+        u'NDN auto-configuration client', None, 1),
+    ('manpages/ndn-autoconfig.conf', 'ndn-autoconfig.conf',
+        u'NDN auto-configuration client configuration file', None, 5),
     ('manpages/nfdc', 'nfdc',
         u'NFD utility to manipulate the forwarding table (FIB)', None, 1),
-    ('manpages/ndn-tlv-peek', 'ndn-tlv-peek', u'NFD consumer', None, 1),
-    ('manpages/ndn-tlv-poke', 'ndn-tlv-poke', u'NFD producer', None, 1),
     ('manpages/nfd-autoreg', 'nfd-autoreg', u'NFD Auto-registration Server', None, 1),
     ('manpages/nfd-status-http-server', 'nfd-status-http-server',
         u'NFD status HTTP server', None, 1),
@@ -260,7 +260,7 @@ man_pages = [
 #man_show_urls = False
 
 doxylink = {
-  'NFD' : ('NFD.tag', 'doxygen/'),
+  'nfd' : ('NFD.tag', 'doxygen/'),
 }
 
 if os.getenv('GOOGLE_ANALYTICS', None):

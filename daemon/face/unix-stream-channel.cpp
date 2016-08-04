@@ -24,7 +24,8 @@
  */
 
 #include "unix-stream-channel.hpp"
-#include "unix-stream-face.hpp"
+#include "generic-link-service.hpp"
+#include "unix-stream-transport.hpp"
 #include "core/global-io.hpp"
 
 #include <boost/filesystem.hpp>
@@ -56,7 +57,7 @@ UnixStreamChannel::~UnixStreamChannel()
 
 void
 UnixStreamChannel::listen(const FaceCreatedCallback& onFaceCreated,
-                          const ConnectFailedCallback& onAcceptFailed,
+                          const FaceCreationFailedCallback& onAcceptFailed,
                           int backlog/* = acceptor::max_connections*/)
 {
   if (isListening()) {
@@ -107,7 +108,7 @@ UnixStreamChannel::listen(const FaceCreatedCallback& onFaceCreated,
 
 void
 UnixStreamChannel::accept(const FaceCreatedCallback& onFaceCreated,
-                          const ConnectFailedCallback& onAcceptFailed)
+                          const FaceCreationFailedCallback& onAcceptFailed)
 {
   m_acceptor.async_accept(m_socket, bind(&UnixStreamChannel::handleAccept, this,
                                          boost::asio::placeholders::error,
@@ -117,7 +118,7 @@ UnixStreamChannel::accept(const FaceCreatedCallback& onFaceCreated,
 void
 UnixStreamChannel::handleAccept(const boost::system::error_code& error,
                                 const FaceCreatedCallback& onFaceCreated,
-                                const ConnectFailedCallback& onAcceptFailed)
+                                const FaceCreationFailedCallback& onAcceptFailed)
 {
   if (error) {
     if (error == boost::asio::error::operation_aborted) // when the socket is closed by someone
@@ -131,9 +132,9 @@ UnixStreamChannel::handleAccept(const boost::system::error_code& error,
 
   NFD_LOG_DEBUG("[" << m_endpoint << "] Incoming connection");
 
-  auto remoteUri = FaceUri::fromFd(m_socket.native_handle());
-  auto localUri = FaceUri(m_socket.local_endpoint());
-  auto face = make_shared<UnixStreamFace>(remoteUri, localUri, std::move(m_socket));
+  auto linkService = make_unique<face::GenericLinkService>();
+  auto transport = make_unique<face::UnixStreamTransport>(std::move(m_socket));
+  auto face = make_shared<Face>(std::move(linkService), std::move(transport));
   onFaceCreated(face);
 
   // prepare accepting the next connection

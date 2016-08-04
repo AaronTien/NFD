@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014-2015,  Regents of the University of California,
+ * Copyright (c) 2014-2016,  Regents of the University of California,
  *                           Arizona Board of Regents,
  *                           Colorado State University,
  *                           University Pierre & Marie Curie, Sorbonne University,
@@ -47,7 +47,7 @@ BOOST_CONCEPT_ASSERT((boost::DefaultConstructible<Cs::const_iterator>));
 unique_ptr<Policy>
 makeDefaultPolicy()
 {
-  return unique_ptr<Policy>(new PriorityFifoPolicy());
+  return make_unique<PriorityFifoPolicy>();
 }
 
 Cs::Cs(size_t nMaxPackets, unique_ptr<Policy> policy)
@@ -78,18 +78,22 @@ Cs::setPolicy(unique_ptr<Policy> policy)
   m_policy->setLimit(limit);
 }
 
-bool
+void
 Cs::insert(const Data& data, bool isUnsolicited)
 {
   NFD_LOG_DEBUG("insert " << data.getName());
 
-  // recognize CachingPolicy
-  using ndn::nfd::LocalControlHeader;
-  const LocalControlHeader& lch = data.getLocalControlHeader();
-  if (lch.hasCachingPolicy()) {
-    LocalControlHeader::CachingPolicy policy = lch.getCachingPolicy();
-    if (policy == LocalControlHeader::CachingPolicy::NO_CACHE) {
-      return false;
+  if (m_policy->getLimit() == 0) {
+    // shortcut for disabled CS
+    return;
+  }
+
+  // recognize CachePolicy
+  shared_ptr<lp::CachePolicyTag> tag = data.getTag<lp::CachePolicyTag>();
+  if (tag != nullptr) {
+    lp::CachePolicyType policy = tag->get().getPolicy();
+    if (policy == lp::CachePolicyType::NO_CACHE) {
+      return;
     }
   }
 
@@ -112,8 +116,6 @@ Cs::insert(const Data& data, bool isUnsolicited)
   else {
     m_policy->afterInsert(it);
   }
-
-  return true;
 }
 
 void

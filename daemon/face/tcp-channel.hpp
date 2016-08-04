@@ -65,7 +65,7 @@ public:
    */
   void
   listen(const FaceCreatedCallback& onFaceCreated,
-         const ConnectFailedCallback& onAcceptFailed,
+         const FaceCreationFailedCallback& onAcceptFailed,
          int backlog = boost::asio::ip::tcp::acceptor::max_connections);
 
   /**
@@ -74,7 +74,7 @@ public:
   void
   connect(const tcp::Endpoint& remoteEndpoint,
           const FaceCreatedCallback& onFaceCreated,
-          const ConnectFailedCallback& onConnectFailed,
+          const FaceCreationFailedCallback& onConnectFailed,
           const time::seconds& timeout = time::seconds(4));
 
   /**
@@ -88,29 +88,29 @@ public:
 
 private:
   void
-  createFace(boost::asio::ip::tcp::socket socket,
+  createFace(boost::asio::ip::tcp::socket&& socket,
              const FaceCreatedCallback& onFaceCreated,
              bool isOnDemand);
 
   void
   accept(const FaceCreatedCallback& onFaceCreated,
-         const ConnectFailedCallback& onConnectFailed);
+         const FaceCreationFailedCallback& onAcceptFailed);
 
   void
   handleAccept(const boost::system::error_code& error,
                const FaceCreatedCallback& onFaceCreated,
-               const ConnectFailedCallback& onConnectFailed);
+               const FaceCreationFailedCallback& onAcceptFailed);
 
   void
   handleConnect(const boost::system::error_code& error,
                 const shared_ptr<boost::asio::ip::tcp::socket>& socket,
                 const scheduler::EventId& connectTimeoutEvent,
                 const FaceCreatedCallback& onFaceCreated,
-                const ConnectFailedCallback& onConnectFailed);
+                const FaceCreationFailedCallback& onConnectFailed);
 
   void
   handleConnectTimeout(const shared_ptr<boost::asio::ip::tcp::socket>& socket,
-                       const ConnectFailedCallback& onConnectFailed);
+                       const FaceCreationFailedCallback& onConnectFailed);
 
 private:
   std::map<tcp::Endpoint, shared_ptr<Face>> m_channelFaces;

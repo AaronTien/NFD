@@ -23,8 +23,8 @@
  * NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "table/cs.hpp"
 #include "table/cs-policy-lru.hpp"
+#include "table/cs.hpp"
 #include <ndn-cxx/util/crypto.hpp>
 
 #include "tests/test-common.hpp"
@@ -34,14 +34,13 @@ namespace cs {
 namespace tests {
 
 using namespace nfd::tests;
-using ndn::nfd::LocalControlHeader;
 
 BOOST_AUTO_TEST_SUITE(CsLru)
 
 BOOST_FIXTURE_TEST_CASE(EvictOneLRU, UnitTestTimeFixture)
 {
   Cs cs(3);
-  cs.setPolicy(unique_ptr<Policy>(new LruPolicy()));
+  cs.setPolicy(make_unique<LruPolicy>());
 
   cs.insert(*makeData("ndn:/A"));
   cs.insert(*makeData("ndn:/B"));

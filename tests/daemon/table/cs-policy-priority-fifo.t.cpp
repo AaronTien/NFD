@@ -23,8 +23,8 @@
  * NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "table/cs.hpp"
 #include "table/cs-policy-priority-fifo.hpp"
+#include "table/cs.hpp"
 #include <ndn-cxx/util/crypto.hpp>
 
 #include "tests/test-common.hpp"
@@ -34,14 +34,13 @@ namespace cs {
 namespace tests {
 
 using namespace nfd::tests;
-using ndn::nfd::LocalControlHeader;
 
 BOOST_AUTO_TEST_SUITE(CsPriorityFifo)
 
 BOOST_FIXTURE_TEST_CASE(EvictOne, UnitTestTimeFixture)
 {
   Cs cs(3);
-  cs.setPolicy(unique_ptr<Policy>(new PriorityFifoPolicy()));
+  cs.setPolicy(make_unique<PriorityFifoPolicy>());
 
   shared_ptr<Data> dataA = makeData("ndn:/A");
   dataA->setFreshnessPeriod(time::milliseconds(99999));
@@ -94,7 +93,7 @@ BOOST_FIXTURE_TEST_CASE(EvictOne, UnitTestTimeFixture)
 BOOST_FIXTURE_TEST_CASE(Refresh, UnitTestTimeFixture)
 {
   Cs cs(3);
-  cs.setPolicy(unique_ptr<Policy>(new PriorityFifoPolicy()));
+  cs.setPolicy(make_unique<PriorityFifoPolicy>());
 
   shared_ptr<Data> dataA = makeData("ndn:/A");
   dataA->setFreshnessPeriod(time::milliseconds(99999));

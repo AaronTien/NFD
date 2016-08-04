@@ -24,14 +24,15 @@
  */
 
 #include "tcp-channel.hpp"
-#include "tcp-face.hpp"
+#include "generic-link-service.hpp"
+#include "tcp-transport.hpp"
 #include "core/global-io.hpp"
 
 namespace nfd {
 
 NFD_LOG_INIT("TcpChannel");
 
-using namespace boost::asio;
+namespace ip = boost::asio::ip;
 
 TcpChannel::TcpChannel(const tcp::Endpoint& localEndpoint)
   : m_localEndpoint(localEndpoint)
@@ -43,7 +44,7 @@ TcpChannel::TcpChannel(const tcp::Endpoint& localEndpoint)
 
 void
 TcpChannel::listen(const FaceCreatedCallback& onFaceCreated,
-                   const ConnectFailedCallback& onAcceptFailed,
+                   const FaceCreationFailedCallback& onAcceptFailed,
                    int backlog/* = tcp::acceptor::max_connections*/)
 {
   if (isListening()) {
@@ -65,8 +66,8 @@ TcpChannel::listen(const FaceCreatedCallback& onFaceCreated,
 
 void
 TcpChannel::connect(const tcp::Endpoint& remoteEndpoint,
-                    const TcpChannel::FaceCreatedCallback& onFaceCreated,
-                    const TcpChannel::ConnectFailedCallback& onConnectFailed,
+                    const FaceCreatedCallback& onFaceCreated,
+                    const FaceCreationFailedCallback& onConnectFailed,
                     const time::seconds& timeout/* = time::seconds(4)*/)
 {
   auto it = m_channelFaces.find(remoteEndpoint);
@@ -94,7 +95,7 @@ TcpChannel::size() const
 }
 
 void
-TcpChannel::createFace(ip::tcp::socket socket,
+TcpChannel::createFace(ip::tcp::socket&& socket,
                        const FaceCreatedCallback& onFaceCreated,
                        bool isOnDemand)
 {
@@ -103,21 +104,18 @@ TcpChannel::createFace(ip::tcp::socket socket,
 
   auto it = m_channelFaces.find(remoteEndpoint);
   if (it == m_channelFaces.end()) {
-    tcp::Endpoint localEndpoint = socket.local_endpoint();
+    auto persistency = isOnDemand ? ndn::nfd::FACE_PERSISTENCY_ON_DEMAND
+                                  : ndn::nfd::FACE_PERSISTENCY_PERSISTENT;
+    auto linkService = make_unique<face::GenericLinkService>();
+    auto transport = make_unique<face::TcpTransport>(std::move(socket), persistency);
+    face = make_shared<Face>(std::move(linkService), std::move(transport));
 
-    if (localEndpoint.address().is_loopback() &&
-        remoteEndpoint.address().is_loopback())
-      face = make_shared<TcpLocalFace>(FaceUri(remoteEndpoint), FaceUri(localEndpoint),
-                                       std::move(socket), isOnDemand);
-    else
-      face = make_shared<TcpFace>(FaceUri(remoteEndpoint), FaceUri(localEndpoint),
-                                  std::move(socket), isOnDemand);
-
-    face->onFail.connectSingleShot([this, remoteEndpoint] (const std::string&) {
-      NFD_LOG_TRACE("Erasing " << remoteEndpoint << " from channel face map");
-      m_channelFaces.erase(remoteEndpoint);
-    });
     m_channelFaces[remoteEndpoint] = face;
+    connectFaceClosedSignal(*face,
+      [this, remoteEndpoint] {
+        NFD_LOG_TRACE("Erasing " << remoteEndpoint << " from channel face map");
+        m_channelFaces.erase(remoteEndpoint);
+      });
   }
   else {
     // we already have a face for this endpoint, just reuse it
@@ -135,7 +133,7 @@ TcpChannel::createFace(ip::tcp::socket socket,
 
 void
 TcpChannel::accept(const FaceCreatedCallback& onFaceCreated,
-                   const ConnectFailedCallback& onAcceptFailed)
+                   const FaceCreationFailedCallback& onAcceptFailed)
 {
   m_acceptor.async_accept(m_acceptSocket, bind(&TcpChannel::handleAccept, this,
                                                boost::asio::placeholders::error,
@@ -145,7 +143,7 @@ TcpChannel::accept(const FaceCreatedCallback& onFaceCreated,
 void
 TcpChannel::handleAccept(const boost::system::error_code& error,
                          const FaceCreatedCallback& onFaceCreated,
-                         const ConnectFailedCallback& onAcceptFailed)
+                         const FaceCreationFailedCallback& onAcceptFailed)
 {
   if (error) {
     if (error == boost::asio::error::operation_aborted) // when the socket is closed by someone
@@ -170,7 +168,7 @@ TcpChannel::handleConnect(const boost::system::error_code& error,
                           const shared_ptr<ip::tcp::socket>& socket,
                           const scheduler::EventId& connectTimeoutEvent,
                           const FaceCreatedCallback& onFaceCreated,
-                          const ConnectFailedCallback& onConnectFailed)
+                          const FaceCreationFailedCallback& onConnectFailed)
 {
   scheduler::cancel(connectTimeoutEvent);
 
@@ -202,7 +200,7 @@ TcpChannel::handleConnect(const boost::system::error_code& error,
 
 void
 TcpChannel::handleConnectTimeout(const shared_ptr<ip::tcp::socket>& socket,
-                                 const ConnectFailedCallback& onConnectFailed)
+                                 const FaceCreationFailedCallback& onConnectFailed)
 {
   NFD_LOG_DEBUG("Connect to remote endpoint timed out");
 

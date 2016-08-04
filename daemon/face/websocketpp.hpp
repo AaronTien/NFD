@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014,  Regents of the University of California,
- *                      Arizona Board of Regents,
- *                      Colorado State University,
- *                      University Pierre & Marie Curie, Sorbonne University,
- *                      Washington University in St. Louis,
- *                      Beijing Institute of Technology,
- *                      The University of Memphis
+ * Copyright (c) 2014-2015,  Regents of the University of California,
+ *                           Arizona Board of Regents,
+ *                           Colorado State University,
+ *                           University Pierre & Marie Curie, Sorbonne University,
+ *                           Washington University in St. Louis,
+ *                           Beijing Institute of Technology,
+ *                           The University of Memphis.
  *
  * This file is part of NFD (Named Data Networking Forwarding Daemon).
  * See AUTHORS.md for complete list of NFD authors and contributors.
@@ -27,14 +27,25 @@
 #define NFD_DAEMON_FACE_WEBSOCKETPP_HPP
 
 #ifndef HAVE_WEBSOCKET
-#error "This file must not be included when WebSocket Face support is disabled"
-#endif
+#error "Cannot include this file when WebSocket support is disabled"
+#endif // HAVE_WEBSOCKET
 
 // suppress websocketpp warnings
 #pragma GCC system_header
 #pragma clang system_header
 
+#include <websocketpp/config/asio_no_tls_client.hpp>
+#include <websocketpp/client.hpp>
 #include "websocketpp/config/asio_no_tls.hpp"
 #include "websocketpp/server.hpp"
+
+namespace nfd {
+namespace websocket {
+
+typedef websocketpp::client<websocketpp::config::asio_client> Client;
+typedef websocketpp::server<websocketpp::config::asio> Server;
+
+} // namespace websocket
+} // namespace nfd
 
 #endif // NFD_DAEMON_FACE_WEBSOCKETPP_HPP

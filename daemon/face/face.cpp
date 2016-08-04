@@ -25,104 +25,31 @@
 
 #include "face.hpp"
 
-#include <ndn-cxx/management/nfd-face-event-notification.hpp>
-
 namespace nfd {
+namespace face {
 
-Face::Face(const FaceUri& remoteUri, const FaceUri& localUri, bool isLocal, bool isMultiAccess)
-  : m_id(INVALID_FACEID)
-  , m_remoteUri(remoteUri)
-  , m_localUri(localUri)
-  , m_isLocal(isLocal)
-  , m_persistency(ndn::nfd::FACE_PERSISTENCY_PERSISTENT)
-  , m_isMultiAccess(isMultiAccess)
-  , m_isFailed(false)
-  , m_metric(0)
+Face::Face(unique_ptr<LinkService> service, unique_ptr<Transport> transport)
+  : afterReceiveInterest(service->afterReceiveInterest)
+  , afterReceiveData(service->afterReceiveData)
+  , afterReceiveNack(service->afterReceiveNack)
+  , afterStateChange(transport->afterStateChange)
+  , m_id(INVALID_FACEID)
+  , m_service(std::move(service))
+  , m_transport(std::move(transport))
+  , m_counters(m_service->getCounters(), m_transport->getCounters())
 {
-  onReceiveInterest.connect([this] (const ndn::Interest&) { ++m_counters.getNInInterests(); });
-  onReceiveData    .connect([this] (const ndn::Data&)     { ++m_counters.getNInDatas(); });
-  onSendInterest   .connect([this] (const ndn::Interest&) { ++m_counters.getNOutInterests(); });
-  onSendData       .connect([this] (const ndn::Data&)     { ++m_counters.getNOutDatas(); });
+  m_service->setFaceAndTransport(*this, *m_transport);
+  m_transport->setFaceAndLinkService(*this, *m_service);
 }
 
-Face::~Face()
+std::ostream&
+operator<<(std::ostream& os, const FaceLogHelper<Face>& flh)
 {
+  const Face& face = flh.obj;
+  os << "[id=" << face.getId() << ",local=" << face.getLocalUri() <<
+        ",remote=" << face.getRemoteUri() << "] ";
+  return os;
 }
 
-bool
-Face::isUp() const
-{
-  return true;
-}
-
-bool
-Face::decodeAndDispatchInput(const Block& element)
-{
-  try {
-    /// \todo Ensure lazy field decoding process
-
-    if (element.type() == tlv::Interest)
-      {
-        shared_ptr<Interest> i = make_shared<Interest>();
-        i->wireDecode(element);
-        this->onReceiveInterest(*i);
-      }
-    else if (element.type() == tlv::Data)
-      {
-        shared_ptr<Data> d = make_shared<Data>();
-        d->wireDecode(element);
-        this->onReceiveData(*d);
-      }
-    else
-      return false;
-
-    return true;
-  }
-  catch (const tlv::Error&) {
-    return false;
-  }
-}
-
-void
-Face::fail(const std::string& reason)
-{
-  if (m_isFailed) {
-    return;
-  }
-
-  m_isFailed = true;
-  this->onFail(reason);
-}
-
-template<typename FaceTraits>
-void
-Face::copyStatusTo(FaceTraits& traits) const
-{
-  traits.setFaceId(getId())
-        .setRemoteUri(getRemoteUri().toString())
-        .setLocalUri(getLocalUri().toString())
-        .setFaceScope(isLocal() ? ndn::nfd::FACE_SCOPE_LOCAL
-                                : ndn::nfd::FACE_SCOPE_NON_LOCAL)
-        .setFacePersistency(getPersistency())
-        .setLinkType(isMultiAccess() ? ndn::nfd::LINK_TYPE_MULTI_ACCESS
-                                     : ndn::nfd::LINK_TYPE_POINT_TO_POINT);
-}
-
-template void
-Face::copyStatusTo<ndn::nfd::FaceStatus>(ndn::nfd::FaceStatus&) const;
-
-template void
-Face::copyStatusTo<ndn::nfd::FaceEventNotification>(ndn::nfd::FaceEventNotification&) const;
-
-ndn::nfd::FaceStatus
-Face::getFaceStatus() const
-{
-  ndn::nfd::FaceStatus status;
-
-  copyStatusTo(status);
-  this->getCounters().copyTo(status);
-
-  return status;
-}
-
+} // namespace face
 } // namespace nfd
